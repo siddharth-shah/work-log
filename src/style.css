@@ -950,14 +950,33 @@ h2 {
 .entry-details {
   display: grid;
   min-width: 0;
-  gap: 4px;
+  gap: 6px;
 }
 
-.entry-details strong {
+.entry-title {
+  display: flex;
+  min-width: 0;
+  gap: 8px;
+  align-items: center;
+}
+
+.entry-title strong {
   overflow: hidden;
   font-size: 0.8rem;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.session-badge {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  color: #3157d5;
+  border: 1px solid #d9e0ff;
+  border-radius: 999px;
+  background: #f2f5ff;
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .entry-details small {

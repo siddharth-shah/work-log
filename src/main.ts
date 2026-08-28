@@ -265,11 +265,19 @@ function valuesForLastSevenDays(): number {
   return data.entries.filter((entry) => entry.date >= cutoffDate).reduce((sum, entry) => sum + entry.durationSeconds, 0)
 }
 
-function renderEntry(entry: TimeEntry): string {
+function renderEntry(entry: TimeEntry, sessionNumber: number): string {
+  const loggedAt = new Intl.DateTimeFormat(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(entry.createdAt))
+
   return `
     <div class="entry-row">
       <span class="entry-date"><b>${new Date(`${entry.date}T12:00:00`).getDate()}</b><small>${new Intl.DateTimeFormat(undefined, { month: 'short' }).format(new Date(`${entry.date}T12:00:00`))}</small></span>
-      <span class="entry-details"><strong>${entry.note ? escapeHtml(entry.note) : 'Tracked time'}</strong><small>${formatDate(entry.date)}</small></span>
+      <span class="entry-details">
+        <span class="entry-title"><strong>${entry.note ? escapeHtml(entry.note) : `Timer session ${sessionNumber}`}</strong><span class="session-badge">Session ${sessionNumber}</span></span>
+        <small>${formatDate(entry.date)} · Logged at ${loggedAt}</small>
+      </span>
       <b class="entry-duration">${formatDuration(entry.durationSeconds)}</b>
       <span class="entry-actions">
         <button class="icon-button" data-edit-entry="${entry.id}" aria-label="Edit entry">${icon('edit')}</button>
@@ -318,7 +326,7 @@ function renderProjectDetail(project: Project): string {
         <div><h2>Time entries</h2><p>Every session logged for this project</p></div>
         ${!isCompleted ? `<button class="text-button" data-open-entry="${project.id}">${icon('plus')} Add manually</button>` : ''}
       </div>
-      ${entries.length ? `<div class="entry-list">${entries.map(renderEntry).join('')}</div>` : `<div class="empty-inline tall">${icon('clock')}<p>No time tracked yet.</p></div>`}
+      ${entries.length ? `<div class="entry-list">${entries.map((entry, index) => renderEntry(entry, entries.length - index)).join('')}</div>` : `<div class="empty-inline tall">${icon('clock')}<p>No time tracked yet.</p></div>`}
     </section>`
 }
 
