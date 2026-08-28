@@ -496,6 +496,7 @@ function bindEvents(): void {
   )
 
   document.querySelector<HTMLFormElement>('#project-form')!.addEventListener('submit', (event) => {
+    event.preventDefault()
     const form = event.currentTarget as HTMLFormElement
     const values = new FormData(form)
     const id = String(values.get('projectId') ?? '')
@@ -510,6 +511,7 @@ function bindEvents(): void {
       data.projects.push(project)
       selectedProjectId = project.id
     }
+    document.querySelector<HTMLDialogElement>('#project-dialog')!.close()
     persist()
   })
 
@@ -543,11 +545,13 @@ function bindEvents(): void {
   document.querySelector<HTMLElement>('[data-export]')!.addEventListener('click', exportBackup)
   document.querySelector<HTMLElement>('[data-import]')!.addEventListener('click', () => document.querySelector<HTMLInputElement>('#import-file')!.click())
   document.querySelector<HTMLInputElement>('#import-file')!.addEventListener('change', handleImportFile)
-  document.querySelector<HTMLFormElement>('#import-form')!.addEventListener('submit', () => {
+  document.querySelector<HTMLFormElement>('#import-form')!.addEventListener('submit', (event) => {
+    event.preventDefault()
     if (!pendingImport) return
     data = pendingImport
     pendingImport = null
     selectedProjectId = null
+    document.querySelector<HTMLDialogElement>('#import-dialog')!.close()
     persist()
     window.setTimeout(() => showToast('Backup imported successfully.'), 0)
   })
