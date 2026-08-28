@@ -278,7 +278,7 @@ function renderEntry(entry: TimeEntry, sessionNumber: number): string {
         <span class="entry-title"><strong>${entry.note ? escapeHtml(entry.note) : `Timer session ${sessionNumber}`}</strong><span class="session-badge">Session ${sessionNumber}</span></span>
         <small>${formatDate(entry.date)} · Logged at ${loggedAt}</small>
       </span>
-      <b class="entry-duration">${formatDuration(entry.durationSeconds)}</b>
+      <b class="entry-duration">${formatDuration(entry.durationSeconds, true)}</b>
       <span class="entry-actions">
         <button class="icon-button" data-edit-entry="${entry.id}" aria-label="Edit entry">${icon('edit')}</button>
         <button class="icon-button danger" data-delete-entry="${entry.id}" aria-label="Delete entry">${icon('trash')}</button>
