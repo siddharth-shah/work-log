@@ -496,7 +496,7 @@ function bindEvents(): void {
   )
 
   document.querySelector<HTMLFormElement>('#project-form')!.addEventListener('submit', (event) => {
-    const form = event.currentTarget
+    const form = event.currentTarget as HTMLFormElement
     const values = new FormData(form)
     const id = String(values.get('projectId') ?? '')
     const name = String(values.get('name') ?? '').trim()
@@ -515,7 +515,7 @@ function bindEvents(): void {
 
   document.querySelector<HTMLFormElement>('#entry-form')!.addEventListener('submit', (event) => {
     event.preventDefault()
-    const form = event.currentTarget
+    const form = event.currentTarget as HTMLFormElement
     const values = new FormData(form)
     const hours = Number(values.get('hours'))
     const minutes = Number(values.get('minutes'))
