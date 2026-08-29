@@ -1,11 +1,13 @@
 {
   "name": "project-time-tracker",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:extension": "npm run build",
+    "package:extension": "npm run build:extension && cd dist && zip -FS -r ../timebase-chrome-extension.zip .",
     "preview": "vite preview"
   },
   "devDependencies": {

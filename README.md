@@ -12,6 +12,7 @@ A lightweight, private project time tracker for the browser. Timebase tracks liv
 - Dashboard totals, recent work, and seven-day activity
 - Versioned JSON export and validated import
 - Responsive desktop and mobile layout
+- Installable Manifest V3 Chrome extension
 
 ## Run locally
 
@@ -29,6 +30,31 @@ Create a production build with:
 ```bash
 npm run build
 ```
+
+## Install as a Chrome extension
+
+Build the extension:
+
+```bash
+npm install
+npm run build:extension
+```
+
+Then load it into Chrome:
+
+1. Open `chrome://extensions`.
+2. Turn on **Developer mode**.
+3. Select **Load unpacked**.
+4. Choose this project's `dist` folder.
+5. Pin Timebase from the Extensions menu. Clicking its toolbar icon opens the tracker in a full browser tab.
+
+To create a ZIP suitable for uploading to the Chrome Web Store:
+
+```bash
+npm run package:extension
+```
+
+This creates `timebase-chrome-extension.zip` in the project root. The web app and extension use separate browser-storage origins; move existing data between them with **Export JSON** and **Import JSON**.
 
 ## Data and privacy
 
