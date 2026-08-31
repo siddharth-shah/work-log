@@ -81,7 +81,38 @@ describe('validateData', () => {
     const backup = validBackup()
     backup.activeTimer = { projectId: 'p1', startedAt: Date.now() - 1000 }
     const result = validateData(backup)
+    expect(result.activeTimer).toEqual({ ...backup.activeTimer, running: true, segments: [] })
+  })
+
+  it('defaults running/segments for a pre-pause-feature backup that lacks them', () => {
+    const backup = validBackup()
+    backup.activeTimer = { projectId: 'p1', startedAt: Date.now() - 1000 }
+    const result = validateData(backup)
+    expect(result.activeTimer?.running).toBe(true)
+    expect(result.activeTimer?.segments).toEqual([])
+  })
+
+  it('accepts a paused timer with banked per-day segments', () => {
+    const backup = validBackup()
+    backup.activeTimer = {
+      projectId: 'p1',
+      startedAt: Date.now() - 1000,
+      running: false,
+      segments: [{ date: '2026-01-01', durationSeconds: 120 }],
+    }
+    const result = validateData(backup)
     expect(result.activeTimer).toEqual(backup.activeTimer)
+  })
+
+  it('rejects a timer whose segments contain an invalid entry', () => {
+    const backup = validBackup()
+    backup.activeTimer = {
+      projectId: 'p1',
+      startedAt: Date.now() - 1000,
+      running: false,
+      segments: [{ date: 'not-a-date', durationSeconds: 120 }],
+    }
+    expect(() => validateData(backup)).toThrow(/running timer in the backup is invalid/)
   })
 
   it('rejects a running timer pointing at a completed project', () => {

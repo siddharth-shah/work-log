@@ -7,16 +7,13 @@ import {
   type TimeEntry,
   loadData,
   parseBackup,
+  pauseActiveTimer,
+  resumeActiveTimer,
   saveData,
+  stopActiveTimer,
+  timerElapsedSeconds,
 } from './storage'
-import {
-  formatDate,
-  formatDuration,
-  formatShortDate,
-  splitDurationByDay,
-  toLocalDate,
-  todayRunningSeconds,
-} from './time'
+import { formatDate, formatDuration, formatShortDate, toLocalDate, todayRunningSeconds } from './time'
 import { watchForExternalChanges } from './sync'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
@@ -29,6 +26,7 @@ const icons: Record<string, string> = {
   overview: '<path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   play: '<path d="m8 5 11 7-11 7z"/>',
+  pause: '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>',
   stop: '<rect x="6" y="6" width="12" height="12" rx="1"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/>',
@@ -44,7 +42,7 @@ const icons: Record<string, string> = {
 }
 
 function icon(name: keyof typeof icons): string {
-  const fill = name === 'overview' || name === 'play' || name === 'stop'
+  const fill = name === 'overview' || name === 'play' || name === 'pause' || name === 'stop'
   return `<svg viewBox="0 0 24 24" aria-hidden="true" ${fill ? 'fill="currentColor"' : 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"'}>${icons[name]}</svg>`
 }
 
@@ -55,15 +53,33 @@ function escapeHtml(value: string): string {
   })
 }
 
+function timerStateFor(projectId: string): 'running' | 'paused' | 'idle' {
+  if (data.activeTimer?.projectId !== projectId) return 'idle'
+  return data.activeTimer.running ? 'running' : 'paused'
+}
+
 function projectTotal(projectId: string, includeRunning = true): number {
   const recorded = data.entries
     .filter((entry) => entry.projectId === projectId)
     .reduce((total, entry) => total + entry.durationSeconds, 0)
-  const running =
-    includeRunning && data.activeTimer?.projectId === projectId
-      ? Math.floor((Date.now() - data.activeTimer.startedAt) / 1000)
-      : 0
+  const timer = data.activeTimer?.projectId === projectId ? data.activeTimer : null
+  const running = includeRunning && timer ? timerElapsedSeconds(timer) : 0
   return recorded + running
+}
+
+// The active timer's contribution to a given day: whatever it already banked
+// into `segments` for that date, plus the live running stretch if it's today
+// and still ticking. Shared by the "Today" stat and the week chart so they
+// can't drift apart, and covers every day a segment was banked on (not just
+// today) — a timer paused across several days should show up on each one.
+function activeTimerSecondsForDay(day: string): number {
+  const timer = data.activeTimer
+  if (!timer) return 0
+  const committed = timer.segments
+    .filter((segment) => segment.date === day)
+    .reduce((total, segment) => total + segment.durationSeconds, 0)
+  const running = timer.running && day === toLocalDate() ? todayRunningSeconds(timer.startedAt) : 0
+  return committed + running
 }
 
 function todayTotal(): number {
@@ -71,7 +87,7 @@ function todayTotal(): number {
   const recorded = data.entries
     .filter((entry) => entry.date === today)
     .reduce((total, entry) => total + entry.durationSeconds, 0)
-  return recorded + (data.activeTimer ? todayRunningSeconds(data.activeTimer.startedAt) : 0)
+  return recorded + activeTimerSecondsForDay(today)
 }
 
 function activeProjects(): Project[] {
@@ -85,12 +101,12 @@ function completedProjects(): Project[] {
 }
 
 function projectNavItem(project: Project): string {
-  const running = data.activeTimer?.projectId === project.id
+  const state = timerStateFor(project.id)
   return `
     <button class="project-nav-item ${selectedProjectId === project.id ? 'active' : ''}" data-select-project="${project.id}">
-      <span class="project-dot ${running ? 'pulse' : ''}" style="--project-color:${project.color}"></span>
+      <span class="project-dot ${state === 'running' ? 'pulse' : ''} ${state === 'paused' ? 'paused' : ''}" style="--project-color:${project.color}"></span>
       <span class="project-nav-name">${escapeHtml(project.name)}</span>
-      <span class="project-nav-time">${running ? formatDuration(projectTotal(project.id), true) : formatDuration(projectTotal(project.id))}</span>
+      <span class="project-nav-time">${formatDuration(projectTotal(project.id), state !== 'idle')}</span>
     </button>`
 }
 
@@ -140,10 +156,11 @@ function renderWeekChart(): string {
     date.setDate(date.getDate() - (6 - index))
     return toLocalDate(date)
   })
-  const values = days.map((day) =>
-    data.entries.filter((entry) => entry.date === day).reduce((sum, entry) => sum + entry.durationSeconds, 0),
+  const values = days.map(
+    (day) =>
+      data.entries.filter((entry) => entry.date === day).reduce((sum, entry) => sum + entry.durationSeconds, 0) +
+      activeTimerSecondsForDay(day),
   )
-  if (data.activeTimer) values[6] += todayRunningSeconds(data.activeTimer.startedAt)
   const max = Math.max(...values, 1)
 
   return `
@@ -180,33 +197,47 @@ function renderRecentEntries(): string {
 }
 
 function renderProjectCard(project: Project): string {
-  const running = data.activeTimer?.projectId === project.id
+  const state = timerStateFor(project.id)
   const lastEntry = data.entries
     .filter((entry) => entry.projectId === project.id)
     .sort((a, b) => b.date.localeCompare(a.date))[0]
   return `
-    <article class="project-card ${running ? 'is-running' : ''}">
+    <article class="project-card ${state === 'running' ? 'is-running' : ''} ${state === 'paused' ? 'is-paused' : ''}">
       <button class="project-card-body" data-select-project="${project.id}">
         <span class="project-icon" style="--project-color:${project.color}">${icon('folder')}</span>
         <span>
           <strong>${escapeHtml(project.name)}</strong>
-          <small>${running ? 'Tracking now' : lastEntry ? `Last tracked ${formatShortDate(lastEntry.date)}` : 'Ready to track'}</small>
+          <small>${state === 'running' ? 'Tracking now' : state === 'paused' ? 'Paused' : lastEntry ? `Last tracked ${formatShortDate(lastEntry.date)}` : 'Ready to track'}</small>
         </span>
         ${icon('arrow')}
       </button>
       <div class="project-card-footer">
-        <b data-timer-display="${project.id}">${running ? formatDuration(projectTotal(project.id), true) : formatDuration(projectTotal(project.id))}</b>
-        <button class="timer-button ${running ? 'stop' : ''}" data-${running ? 'stop' : 'start'}-timer="${project.id}">
-          ${icon(running ? 'stop' : 'play')} ${running ? 'Stop' : 'Start'}
-        </button>
+        <b data-timer-display="${project.id}">${formatDuration(projectTotal(project.id), state !== 'idle')}</b>
+        <div class="timer-actions">${timerActionButtons(project.id, state)}</div>
       </div>
     </article>`
+}
+
+// Shared button markup for the three timer states, used by the project
+// card, the overview running banner, and the project detail page so the
+// start/pause/resume/stop affordances stay in sync everywhere they appear.
+function timerActionButtons(projectId: string, state: 'running' | 'paused' | 'idle', size: '' | 'large' = ''): string {
+  if (state === 'running') {
+    return `<button class="timer-button pause ${size}" data-pause-timer="${projectId}">${icon('pause')} Pause</button>
+      <button class="timer-button stop" data-stop-timer="${projectId}">${icon('stop')} Stop</button>`
+  }
+  if (state === 'paused') {
+    return `<button class="timer-button ${size}" data-resume-timer="${projectId}">${icon('play')} Resume</button>
+      <button class="timer-button stop" data-stop-timer="${projectId}">${icon('stop')} Stop</button>`
+  }
+  return `<button class="timer-button ${size}" data-start-timer="${projectId}">${icon('play')} Start</button>`
 }
 
 function renderOverview(): string {
   const active = activeProjects()
   const overall = data.entries.reduce((sum, entry) => sum + entry.durationSeconds, 0)
-  const runningProject = data.activeTimer ? data.projects.find((project) => project.id === data.activeTimer?.projectId) : null
+  const timerProject = data.activeTimer ? data.projects.find((project) => project.id === data.activeTimer?.projectId) : null
+  const timerState = timerProject ? timerStateFor(timerProject.id) : 'idle'
 
   return `
     <header class="page-header">
@@ -214,12 +245,12 @@ function renderOverview(): string {
       <button class="primary-button" data-open-project>${icon('plus')} New project</button>
     </header>
     ${
-      runningProject
-        ? `<section class="running-banner">
+      timerProject
+        ? `<section class="running-banner ${timerState === 'paused' ? 'is-paused' : ''}">
             <span class="running-indicator"><i></i>${icon('clock')}</span>
-            <div><small>Tracking now</small><strong>${escapeHtml(runningProject.name)}</strong></div>
-            <b data-timer-display="${runningProject.id}">${formatDuration(projectTotal(runningProject.id), true)}</b>
-            <button class="timer-button stop" data-stop-timer="${runningProject.id}">${icon('stop')} Stop timer</button>
+            <div><small>${timerState === 'running' ? 'Tracking now' : 'Paused'}</small><strong>${escapeHtml(timerProject.name)}</strong></div>
+            <b data-timer-display="${timerProject.id}">${formatDuration(projectTotal(timerProject.id), true)}</b>
+            <div class="running-banner-actions">${timerActionButtons(timerProject.id, timerState)}</div>
           </section>`
         : ''
     }
@@ -291,14 +322,14 @@ function renderProjectDetail(project: Project): string {
   const entries = data.entries
     .filter((entry) => entry.projectId === project.id)
     .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt))
-  const running = data.activeTimer?.projectId === project.id
+  const state = timerStateFor(project.id)
   const isCompleted = project.completedAt !== null
 
   return `
     <header class="page-header detail-header">
       <div class="project-title">
         <span class="project-icon large" style="--project-color:${project.color}">${icon('folder')}</span>
-        <div><p class="eyebrow">${isCompleted ? 'Completed project' : 'Active project'}</p><h1>${escapeHtml(project.name)}</h1><p>Created ${formatDate(toLocalDate(new Date(project.createdAt)))}</p></div>
+        <div><p class="eyebrow">${isCompleted ? 'Completed project' : state === 'running' ? 'Tracking now' : state === 'paused' ? 'Paused' : 'Active project'}</p><h1>${escapeHtml(project.name)}</h1><p>Created ${formatDate(toLocalDate(new Date(project.createdAt)))}</p></div>
       </div>
       <div class="header-actions">
         <button class="secondary-button" data-edit-project="${project.id}">${icon('edit')} Edit</button>
@@ -311,14 +342,12 @@ function renderProjectDetail(project: Project): string {
       </div>
     </header>
     <section class="project-summary">
-      <div><small>Total tracked</small><strong data-timer-display="${project.id}">${formatDuration(projectTotal(project.id), running)}</strong><p>${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}</p></div>
+      <div><small>Total tracked</small><strong data-timer-display="${project.id}">${formatDuration(projectTotal(project.id), state !== 'idle')}</strong><p>${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}</p></div>
       ${
         !isCompleted
           ? `<div class="project-summary-actions">
               <button class="secondary-button" data-open-entry="${project.id}">${icon('plus')} Add time</button>
-              <button class="timer-button ${running ? 'stop' : 'large'}" data-${running ? 'stop' : 'start'}-timer="${project.id}">
-                ${icon(running ? 'stop' : 'play')} ${running ? 'Stop timer' : 'Start timer'}
-              </button>
+              ${timerActionButtons(project.id, state, 'large')}
             </div>`
           : ''
       }
@@ -447,30 +476,28 @@ async function startTimer(projectId: string): Promise<void> {
       { confirmLabel: 'Switch timer' },
     )
     if (!confirmed) return
-    stopTimer(data.activeTimer.projectId, false)
+    // `data` may have been replaced wholesale by a cross-tab sync event while
+    // the confirm dialog was open (watchForExternalChanges keeps reloading it
+    // even though render() is skipped while a dialog is open) — re-check
+    // rather than trusting the activeTimer captured before the await.
+    if (data.activeTimer && data.activeTimer.projectId !== projectId) stopTimer(data.activeTimer.projectId, false)
   }
   if (!data.activeTimer) {
-    data.activeTimer = { projectId, startedAt: Date.now() }
+    data.activeTimer = { projectId, startedAt: Date.now(), running: true, segments: [] }
     persist()
   }
 }
 
+function pauseTimer(projectId: string): void {
+  if (pauseActiveTimer(data, projectId)) persist()
+}
+
+function resumeTimer(projectId: string): void {
+  if (resumeActiveTimer(data, projectId)) persist()
+}
+
 function stopTimer(projectId: string, shouldPersist = true): void {
-  if (!data.activeTimer || data.activeTimer.projectId !== projectId) return
-  const endedAt = Date.now()
-  const startedAt = data.activeTimer.startedAt
-  splitDurationByDay(startedAt, endedAt).forEach((segment) => {
-    data.entries.push({
-      id: crypto.randomUUID(),
-      projectId,
-      date: segment.date,
-      durationSeconds: segment.durationSeconds,
-      note: '',
-      createdAt: new Date().toISOString(),
-    })
-  })
-  data.activeTimer = null
-  if (shouldPersist) persist()
+  if (stopActiveTimer(data, projectId) && shouldPersist) persist()
 }
 
 function bindEvents(): void {
@@ -502,6 +529,12 @@ function bindEvents(): void {
   )
   document.querySelectorAll<HTMLElement>('[data-start-timer]').forEach((button) =>
     button.addEventListener('click', () => startTimer(button.dataset.startTimer!)),
+  )
+  document.querySelectorAll<HTMLElement>('[data-pause-timer]').forEach((button) =>
+    button.addEventListener('click', () => pauseTimer(button.dataset.pauseTimer!)),
+  )
+  document.querySelectorAll<HTMLElement>('[data-resume-timer]').forEach((button) =>
+    button.addEventListener('click', () => resumeTimer(button.dataset.resumeTimer!)),
   )
   document.querySelectorAll<HTMLElement>('[data-stop-timer]').forEach((button) =>
     button.addEventListener('click', () => stopTimer(button.dataset.stopTimer!)),
@@ -658,7 +691,7 @@ async function handleImportFile(event: Event): Promise<void> {
 }
 
 window.setInterval(() => {
-  if (!data.activeTimer) return
+  if (!data.activeTimer || !data.activeTimer.running) return
   const projectId = data.activeTimer.projectId
   document.querySelectorAll<HTMLElement>(`[data-timer-display="${projectId}"]`).forEach((element) => {
     element.textContent = formatDuration(projectTotal(projectId), true)

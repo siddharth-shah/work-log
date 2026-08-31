@@ -1,32 +1,33 @@
 import { describe, expect, it } from 'vitest'
-import { formatDuration, splitDurationByDay, toLocalDate, todayRunningSeconds } from './time'
+import { formatDuration, mergeDurationSegments, splitDurationByDay, toLocalDate, todayRunningSeconds } from './time'
 
 describe('formatDuration', () => {
-  it('shows 0m for zero seconds', () => {
-    expect(formatDuration(0)).toBe('0m')
+  it('shows 0s for zero seconds', () => {
+    expect(formatDuration(0)).toBe('0s')
   })
 
-  it('shows < 1m for a non-zero duration under a minute', () => {
-    expect(formatDuration(30)).toBe('< 1m')
+  it('shows exact seconds for a non-zero duration under a minute, never a rounded-away bucket', () => {
+    expect(formatDuration(30)).toBe('30s')
   })
 
-  it('shows only minutes under an hour', () => {
-    expect(formatDuration(25 * 60)).toBe('25m')
+  it('shows minutes and seconds under an hour', () => {
+    expect(formatDuration(25 * 60)).toBe('25m 0s')
+    expect(formatDuration(25 * 60 + 9)).toBe('25m 9s')
   })
 
-  it('shows only hours on an exact hour', () => {
-    expect(formatDuration(2 * 3600)).toBe('2h')
+  it('shows hours, minutes, and seconds on an exact hour', () => {
+    expect(formatDuration(2 * 3600)).toBe('2h 0m 0s')
   })
 
-  it('shows hours and minutes together', () => {
-    expect(formatDuration(2 * 3600 + 15 * 60)).toBe('2h 15m')
+  it('shows hours, minutes, and seconds together', () => {
+    expect(formatDuration(2 * 3600 + 15 * 60 + 42)).toBe('2h 15m 42s')
   })
 
   it('clamps negative input to zero instead of showing a negative duration', () => {
-    expect(formatDuration(-500)).toBe('0m')
+    expect(formatDuration(-500)).toBe('0s')
   })
 
-  it('includes seconds as HH:MM:SS when requested', () => {
+  it('includes seconds as HH:MM:SS when requested as a clock', () => {
     expect(formatDuration(3661, true)).toBe('01:01:01')
   })
 
@@ -81,6 +82,41 @@ describe('splitDurationByDay', () => {
     const segments = splitDurationByDay(start, start + 400)
     expect(segments).toHaveLength(1)
     expect(segments[0].durationSeconds).toBeGreaterThanOrEqual(1)
+  })
+})
+
+describe('mergeDurationSegments', () => {
+  it('adds durations together for a date that appears on both sides', () => {
+    const merged = mergeDurationSegments([{ date: '2026-01-01', durationSeconds: 60 }], [{ date: '2026-01-01', durationSeconds: 30 }])
+    expect(merged).toEqual([{ date: '2026-01-01', durationSeconds: 90 }])
+  })
+
+  it('keeps dates that only appear on one side, sorted chronologically', () => {
+    const merged = mergeDurationSegments(
+      [{ date: '2026-01-02', durationSeconds: 60 }],
+      [{ date: '2026-01-01', durationSeconds: 30 }],
+    )
+    expect(merged).toEqual([
+      { date: '2026-01-01', durationSeconds: 30 },
+      { date: '2026-01-02', durationSeconds: 60 },
+    ])
+  })
+
+  it('is a no-op when merging an empty list of additions', () => {
+    const base = [{ date: '2026-01-01', durationSeconds: 60 }]
+    expect(mergeDurationSegments(base, [])).toEqual(base)
+  })
+
+  it('correctly banks multiple pause/resume cycles across a midnight crossing', () => {
+    // Simulates: run 23:00→23:30 (pause), run 23:45→00:15 next day (pause), run 00:20→00:25 (stop).
+    let segments = mergeDurationSegments([], splitDurationByDay(new Date(2026, 0, 1, 23, 0, 0).getTime(), new Date(2026, 0, 1, 23, 30, 0).getTime()))
+    segments = mergeDurationSegments(segments, splitDurationByDay(new Date(2026, 0, 1, 23, 45, 0).getTime(), new Date(2026, 0, 2, 0, 15, 0).getTime()))
+    segments = mergeDurationSegments(segments, splitDurationByDay(new Date(2026, 0, 2, 0, 20, 0).getTime(), new Date(2026, 0, 2, 0, 25, 0).getTime()))
+
+    expect(segments).toEqual([
+      { date: '2026-01-01', durationSeconds: 30 * 60 + 15 * 60 },
+      { date: '2026-01-02', durationSeconds: 15 * 60 + 5 * 60 },
+    ])
   })
 })
 

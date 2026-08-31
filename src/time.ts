@@ -1,20 +1,25 @@
 const SECONDS_IN_MINUTE = 60
 const SECONDS_IN_HOUR = 60 * SECONDS_IN_MINUTE
 
-export function formatDuration(totalSeconds: number, includeSeconds = false): string {
+// Always exact to the second — no "< 1m" bucket that hides short durations.
+// Pass `asClock` for a fixed-width HH:MM:SS readout (used for live-ticking
+// displays); otherwise a compact "1h 2m 3s" form that only shows the units
+// that matter (skips leading zero units, but never drops seconds).
+export function formatDuration(totalSeconds: number, asClock = false): string {
   const safeSeconds = Math.max(0, Math.floor(totalSeconds))
   const hours = Math.floor(safeSeconds / SECONDS_IN_HOUR)
   const minutes = Math.floor((safeSeconds % SECONDS_IN_HOUR) / SECONDS_IN_MINUTE)
   const seconds = safeSeconds % SECONDS_IN_MINUTE
 
-  if (includeSeconds) {
+  if (asClock) {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
   }
 
-  if (hours === 0 && minutes === 0) return safeSeconds > 0 ? '< 1m' : '0m'
-  if (hours === 0) return `${minutes}m`
-  if (minutes === 0) return `${hours}h`
-  return `${hours}h ${minutes}m`
+  const parts: string[] = []
+  if (hours) parts.push(`${hours}h`)
+  if (hours || minutes) parts.push(`${minutes}m`)
+  parts.push(`${seconds}s`)
+  return parts.join(' ')
 }
 
 export function formatDate(date: string): string {
@@ -46,8 +51,13 @@ export function startOfLocalDay(value: Date | number): number {
   return date.getTime()
 }
 
-export function splitDurationByDay(startedAt: number, endedAt: number): Array<{ date: string; durationSeconds: number }> {
-  const segments: Array<{ date: string; durationSeconds: number }> = []
+export interface DurationSegment {
+  date: string
+  durationSeconds: number
+}
+
+export function splitDurationByDay(startedAt: number, endedAt: number): DurationSegment[] {
+  const segments: DurationSegment[] = []
   let cursor = startedAt
 
   while (cursor < endedAt) {
@@ -60,6 +70,19 @@ export function splitDurationByDay(startedAt: number, endedAt: number): Array<{ 
   }
 
   return segments
+}
+
+// Combines two sets of per-day duration segments, adding durations together
+// wherever both sides touch the same date. Used to bank a timer's elapsed
+// time across pause/resume cycles without fragmenting it into one log entry
+// per cycle — the running segments are merged, not appended.
+export function mergeDurationSegments(base: DurationSegment[], additions: DurationSegment[]): DurationSegment[] {
+  const totals = new Map<string, number>()
+  for (const segment of base) totals.set(segment.date, (totals.get(segment.date) ?? 0) + segment.durationSeconds)
+  for (const segment of additions) totals.set(segment.date, (totals.get(segment.date) ?? 0) + segment.durationSeconds)
+  return [...totals.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, durationSeconds]) => ({ date, durationSeconds }))
 }
 
 export function todayRunningSeconds(startedAt: number, now = Date.now()): number {
