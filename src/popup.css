@@ -1,0 +1,238 @@
+:root {
+  --ink: #172033;
+  --muted: #737c8f;
+  --border: #e7e9f0;
+  --primary: #3157d5;
+  --primary-soft: #eef2ff;
+  --danger: #d34646;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  width: 320px;
+}
+
+body {
+  color: var(--ink);
+  background: #fff;
+  font-family: Inter, 'Avenir Next', ui-sans-serif, system-ui, sans-serif;
+  font-synthesis: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.popup-shell {
+  display: flex;
+  flex-direction: column;
+}
+
+.popup-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 14px 16px 10px;
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: -0.01em;
+}
+
+.popup-header svg {
+  width: 16px;
+  height: 16px;
+  color: var(--primary);
+}
+
+.popup-running {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  align-items: center;
+  margin: 0 12px 10px;
+  padding: 14px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary), #4a6ee0);
+  color: #fff;
+}
+
+.popup-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--project-color, #fff);
+}
+
+.popup-dot.pulse {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--project-color, #fff), transparent 78%);
+  animation: popup-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes popup-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.popup-running-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.popup-running-info small {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.63rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.popup-running-info strong {
+  overflow: hidden;
+  font-size: 0.86rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.popup-timer {
+  grid-column: 1 / -1;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.popup-stop-button {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  margin-top: 2px;
+  padding: 0 12px;
+  color: var(--primary);
+  border: none;
+  border-radius: 9px;
+  background: #fff;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.popup-stop-button:hover {
+  background: #f0f3ff;
+}
+
+.popup-stop-button svg {
+  width: 13px;
+  height: 13px;
+}
+
+.popup-subhead {
+  margin: 2px 16px 6px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.popup-list {
+  display: grid;
+  gap: 2px;
+  max-height: 260px;
+  padding: 0 8px;
+  overflow-y: auto;
+}
+
+.popup-project-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  text-align: left;
+}
+
+.popup-project-row:hover {
+  background: var(--primary-soft);
+}
+
+.popup-project-row:hover .popup-play-icon {
+  color: var(--primary);
+}
+
+.popup-project-name {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.popup-project-time {
+  flex: 1;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.72rem;
+  text-align: right;
+}
+
+.popup-play-icon {
+  width: 13px;
+  height: 13px;
+  color: #c3c8d4;
+}
+
+.popup-play-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.popup-empty {
+  padding: 6px 16px 16px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.popup-dashboard-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  margin: 10px 0 0;
+  padding: 0 16px;
+  color: var(--muted);
+  border: none;
+  border-top: 1px solid var(--border);
+  background: #fafbfc;
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.popup-dashboard-link:hover {
+  color: var(--primary);
+}
+
+.popup-dashboard-link svg {
+  width: 13px;
+  height: 13px;
+}

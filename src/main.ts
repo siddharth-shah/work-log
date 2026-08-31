@@ -17,6 +17,7 @@ import {
   toLocalDate,
   todayRunningSeconds,
 } from './time'
+import { watchForExternalChanges } from './sync'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 let data = loadData()
@@ -303,7 +304,8 @@ function renderProjectDetail(project: Project): string {
         <button class="secondary-button" data-edit-project="${project.id}">${icon('edit')} Edit</button>
         ${
           isCompleted
-            ? `<button class="secondary-button" data-restore-project="${project.id}">${icon('restore')} Restore</button>`
+            ? `<button class="secondary-button" data-restore-project="${project.id}">${icon('restore')} Restore</button>
+               <button class="secondary-button danger" data-delete-project="${project.id}">${icon('trash')} Delete</button>`
             : `<button class="secondary-button" data-complete-project="${project.id}">${icon('check')} Complete</button>`
         }
       </div>
@@ -360,6 +362,13 @@ function renderDialogs(): string {
         <div class="dialog-actions"><button class="secondary-button" value="cancel">Cancel</button><button class="primary-button" value="default" type="submit">Import backup</button></div>
       </form>
     </dialog>
+    <dialog id="confirm-dialog">
+      <form method="dialog" class="dialog-form">
+        <div class="dialog-heading"><div><h2 id="confirm-title">Are you sure?</h2></div><button class="icon-button" value="cancel" aria-label="Close">${icon('close')}</button></div>
+        <p id="confirm-message"></p>
+        <div class="dialog-actions"><button class="secondary-button" value="cancel">Cancel</button><button class="primary-button" id="confirm-confirm-button" value="confirm" type="submit">Confirm</button></div>
+      </form>
+    </dialog>
     <div class="toast" role="status" aria-live="polite"></div>`
 }
 
@@ -389,6 +398,22 @@ function showToast(message: string, isError = false): void {
   toastTimeout = window.setTimeout(() => toast.classList.remove('visible'), 3500)
 }
 
+function confirmAction(message: string, options: { confirmLabel?: string; danger?: boolean } = {}): Promise<boolean> {
+  const dialog = document.querySelector<HTMLDialogElement>('#confirm-dialog')!
+  document.querySelector<HTMLParagraphElement>('#confirm-message')!.textContent = message
+  const confirmButton = document.querySelector<HTMLButtonElement>('#confirm-confirm-button')!
+  confirmButton.textContent = options.confirmLabel ?? 'Confirm'
+  confirmButton.classList.toggle('danger', Boolean(options.danger))
+  dialog.showModal()
+  return new Promise((resolve) => {
+    dialog.addEventListener(
+      'close',
+      () => resolve(dialog.returnValue === 'confirm'),
+      { once: true },
+    )
+  })
+}
+
 function openProjectDialog(project?: Project): void {
   const dialog = document.querySelector<HTMLDialogElement>('#project-dialog')!
   const form = document.querySelector<HTMLFormElement>('#project-form')!
@@ -414,10 +439,14 @@ function openEntryDialog(projectId: string, entry?: TimeEntry): void {
   dialog.showModal()
 }
 
-function startTimer(projectId: string): void {
+async function startTimer(projectId: string): Promise<void> {
   if (data.activeTimer && data.activeTimer.projectId !== projectId) {
     const current = data.projects.find((project) => project.id === data.activeTimer?.projectId)
-    if (!window.confirm(`Stop the timer for “${current?.name ?? 'another project'}” and start this one?`)) return
+    const confirmed = await confirmAction(
+      `Stop the timer for “${current?.name ?? 'another project'}” and start this one?`,
+      { confirmLabel: 'Switch timer' },
+    )
+    if (!confirmed) return
     stopTimer(data.activeTimer.projectId, false)
   }
   if (!data.activeTimer) {
@@ -478,12 +507,15 @@ function bindEvents(): void {
     button.addEventListener('click', () => stopTimer(button.dataset.stopTimer!)),
   )
   document.querySelectorAll<HTMLElement>('[data-complete-project]').forEach((button) =>
-    button.addEventListener('click', () => {
+    button.addEventListener('click', async () => {
       const project = data.projects.find((item) => item.id === button.dataset.completeProject)
-      if (!project || !window.confirm(`Mark “${project.name}” as completed?`)) return
+      if (!project) return
+      const confirmed = await confirmAction(`Mark “${project.name}” as completed?`, { confirmLabel: 'Complete' })
+      if (!confirmed) return
       if (data.activeTimer?.projectId === project.id) stopTimer(project.id, false)
       project.completedAt = new Date().toISOString()
       persist()
+      showToast('Project marked complete.')
     }),
   )
   document.querySelectorAll<HTMLElement>('[data-restore-project]').forEach((button) =>
@@ -495,9 +527,31 @@ function bindEvents(): void {
       }
     }),
   )
+  document.querySelectorAll<HTMLElement>('[data-delete-project]').forEach((button) =>
+    button.addEventListener('click', async () => {
+      const project = data.projects.find((item) => item.id === button.dataset.deleteProject)
+      if (!project) return
+      const entryCount = data.entries.filter((entry) => entry.projectId === project.id).length
+      const detail = entryCount ? ` and its ${entryCount} time ${entryCount === 1 ? 'entry' : 'entries'}` : ''
+      const confirmed = await confirmAction(`Delete “${project.name}”${detail}? This cannot be undone.`, {
+        confirmLabel: 'Delete project',
+        danger: true,
+      })
+      if (!confirmed) return
+      data.projects = data.projects.filter((item) => item.id !== project.id)
+      data.entries = data.entries.filter((entry) => entry.projectId !== project.id)
+      if (selectedProjectId === project.id) selectedProjectId = null
+      persist()
+      showToast('Project deleted.')
+    }),
+  )
   document.querySelectorAll<HTMLElement>('[data-delete-entry]').forEach((button) =>
-    button.addEventListener('click', () => {
-      if (!window.confirm('Delete this time entry? This cannot be undone.')) return
+    button.addEventListener('click', async () => {
+      const confirmed = await confirmAction('Delete this time entry? This cannot be undone.', {
+        confirmLabel: 'Delete entry',
+        danger: true,
+      })
+      if (!confirmed) return
       data.entries = data.entries.filter((entry) => entry.id !== button.dataset.deleteEntry)
       persist()
     }),
@@ -506,6 +560,10 @@ function bindEvents(): void {
   document.querySelector<HTMLFormElement>('#project-form')!.addEventListener('submit', (event) => {
     event.preventDefault()
     const form = event.currentTarget as HTMLFormElement
+    if ((event as SubmitEvent).submitter?.getAttribute('value') === 'cancel') {
+      document.querySelector<HTMLDialogElement>('#project-dialog')!.close()
+      return
+    }
     const values = new FormData(form)
     const id = String(values.get('projectId') ?? '')
     const name = String(values.get('name') ?? '').trim()
@@ -526,6 +584,10 @@ function bindEvents(): void {
   document.querySelector<HTMLFormElement>('#entry-form')!.addEventListener('submit', (event) => {
     event.preventDefault()
     const form = event.currentTarget as HTMLFormElement
+    if ((event as SubmitEvent).submitter?.getAttribute('value') === 'cancel') {
+      document.querySelector<HTMLDialogElement>('#entry-dialog')!.close()
+      return
+    }
     const values = new FormData(form)
     const hours = Number(values.get('hours'))
     const minutes = Number(values.get('minutes'))
@@ -555,6 +617,11 @@ function bindEvents(): void {
   document.querySelector<HTMLInputElement>('#import-file')!.addEventListener('change', handleImportFile)
   document.querySelector<HTMLFormElement>('#import-form')!.addEventListener('submit', (event) => {
     event.preventDefault()
+    if ((event as SubmitEvent).submitter?.getAttribute('value') === 'cancel') {
+      pendingImport = null
+      document.querySelector<HTMLDialogElement>('#import-dialog')!.close()
+      return
+    }
     if (!pendingImport) return
     data = pendingImport
     pendingImport = null
@@ -605,5 +672,16 @@ window.setInterval(() => {
     }
   })
 }, 1000)
+
+// Keep this tab in sync with changes made in another dashboard tab or the
+// extension popup — otherwise a timer started/stopped elsewhere never shows
+// up here until some unrelated action happens to trigger a re-render.
+watchForExternalChanges(() => {
+  data = loadData()
+  // Don't blow away a dialog the user is actively filling in (render() replaces
+  // the whole DOM, which would silently close it) — the next local action will
+  // pick up the merged state anyway.
+  if (!document.querySelector('dialog[open]')) render()
+})
 
 render()

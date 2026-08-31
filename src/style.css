@@ -376,6 +376,16 @@ h2 {
   background: #264bc6;
 }
 
+.primary-button.danger {
+  border-color: var(--danger);
+  background: var(--danger);
+  box-shadow: 0 6px 16px rgba(211, 70, 70, 0.18);
+}
+
+.primary-button.danger:hover {
+  background: #b93737;
+}
+
 .primary-button svg,
 .secondary-button svg,
 .timer-button svg,
@@ -396,6 +406,16 @@ h2 {
   color: var(--ink);
   border-color: #cdd1dc;
   background: #fafbfc;
+}
+
+.secondary-button.danger {
+  color: var(--danger);
+}
+
+.secondary-button.danger:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: #fff0f0;
 }
 
 .running-banner {
@@ -1114,6 +1134,12 @@ dialog::backdrop {
   margin: -8px 0;
   color: var(--danger);
   font-size: 0.7rem;
+}
+
+#confirm-message {
+  color: #50596e;
+  font-size: 0.84rem;
+  line-height: 1.5;
 }
 
 .warning-copy {

@@ -13,6 +13,9 @@ dist-ssr
 timebase-chrome-extension.zip
 *.local
 
+# Internal notes / plan docs (not for publishing)
+UX_ISSUES.md
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

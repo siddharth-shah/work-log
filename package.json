@@ -8,10 +8,13 @@
     "build": "tsc && vite build",
     "build:extension": "npm run build",
     "package:extension": "npm run build:extension && cd dist && zip -FS -r ../timebase-chrome-extension.zip .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run"
   },
   "devDependencies": {
+    "jsdom": "^29.1.1",
     "typescript": "~6.0.2",
-    "vite": "^8.2.2"
+    "vite": "^8.2.2",
+    "vitest": "^4.1.11"
   }
 }

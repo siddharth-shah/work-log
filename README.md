@@ -46,7 +46,7 @@ Then load it into Chrome:
 2. Turn on **Developer mode**.
 3. Select **Load unpacked**.
 4. Choose this project's `dist` folder.
-5. Pin Timebase from the Extensions menu. Clicking its toolbar icon opens the tracker in a full browser tab.
+5. Pin Timebase from the Extensions menu. Clicking its toolbar icon opens a compact popup showing the running timer (or a quick-start list of your active projects); use "Open full dashboard" in the popup to get the full tab view.
 
 To create a ZIP suitable for uploading to the Chrome Web Store:
 
