@@ -37,7 +37,7 @@ describe('dashboard tab reacts to external timer changes', () => {
 
   it('picks up a timer started by another tab/popup once the storage event fires', () => {
     const data = loadData()
-    data.activeTimer = { projectId: 'p1', startedAt: Date.now() }
+    data.activeTimer = { projectId: 'p1', startedAt: Date.now(), running: true, segments: [] }
     saveData(data)
 
     window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY, storageArea: localStorage }))
@@ -47,7 +47,7 @@ describe('dashboard tab reacts to external timer changes', () => {
 
   it('picks up a timer stopped by another tab/popup once the storage event fires', () => {
     let data = loadData()
-    data.activeTimer = { projectId: 'p1', startedAt: Date.now() - 5000 }
+    data.activeTimer = { projectId: 'p1', startedAt: Date.now() - 5000, running: true, segments: [] }
     saveData(data)
     window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY, storageArea: localStorage }))
     expect(document.body.textContent).toContain('Tracking now')
@@ -66,7 +66,7 @@ describe('dashboard tab reacts to external timer changes', () => {
     expect(dialog.open).toBe(true)
 
     const data = loadData()
-    data.activeTimer = { projectId: 'p1', startedAt: Date.now() }
+    data.activeTimer = { projectId: 'p1', startedAt: Date.now(), running: true, segments: [] }
     saveData(data)
     window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY, storageArea: localStorage }))
 

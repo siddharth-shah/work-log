@@ -32,7 +32,7 @@ describe('popup reacts to external timer changes', () => {
 
   it('switches to the running view once the dashboard tab starts a timer', () => {
     const data = loadData()
-    data.activeTimer = { projectId: 'p1', startedAt: Date.now() }
+    data.activeTimer = { projectId: 'p1', startedAt: Date.now(), running: true, segments: [] }
     saveData(data)
 
     window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY, storageArea: localStorage }))
@@ -42,7 +42,7 @@ describe('popup reacts to external timer changes', () => {
 
   it('switches back to the quick-start list once the dashboard tab stops the timer', () => {
     let data = loadData()
-    data.activeTimer = { projectId: 'p1', startedAt: Date.now() - 5000 }
+    data.activeTimer = { projectId: 'p1', startedAt: Date.now() - 5000, running: true, segments: [] }
     saveData(data)
     window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY, storageArea: localStorage }))
     expect(document.body.textContent).toContain('Tracking now')

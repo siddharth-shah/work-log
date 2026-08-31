@@ -115,14 +115,21 @@ button {
   font-weight: 700;
 }
 
-.popup-stop-button {
-  grid-column: 1 / -1;
+.popup-timer-actions {
   display: flex;
+  grid-column: 1 / -1;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.popup-stop-button,
+.popup-pause-button {
+  display: flex;
+  flex: 1;
   align-items: center;
   justify-content: center;
   gap: 6px;
   min-height: 34px;
-  margin-top: 2px;
   padding: 0 12px;
   color: var(--primary);
   border: none;
@@ -132,13 +139,23 @@ button {
   font-weight: 700;
 }
 
-.popup-stop-button:hover {
+.popup-stop-button:hover,
+.popup-pause-button:hover {
   background: #f0f3ff;
 }
 
-.popup-stop-button svg {
+.popup-stop-button svg,
+.popup-pause-button svg {
   width: 13px;
   height: 13px;
+}
+
+.popup-running.is-paused {
+  background: linear-gradient(135deg, #b98a1d, #d7a233);
+}
+
+.popup-dot.paused {
+  background: #fff3d6;
 }
 
 .popup-subhead {
@@ -197,7 +214,7 @@ button {
 .popup-play-icon {
   width: 13px;
   height: 13px;
-  color: #c3c8d4;
+  color: var(--muted);
 }
 
 .popup-play-icon svg {
