@@ -365,37 +365,37 @@ function renderDialogs(): string {
   return `
     <dialog id="project-dialog">
       <form method="dialog" id="project-form" class="dialog-form">
-        <div class="dialog-heading"><div><p class="eyebrow">Project details</p><h2 id="project-dialog-title">New project</h2></div><button class="icon-button" value="cancel" aria-label="Close">${icon('close')}</button></div>
+        <div class="dialog-heading"><div><p class="eyebrow">Project details</p><h2 id="project-dialog-title">New project</h2></div><button class="icon-button" value="cancel" formnovalidate aria-label="Close">${icon('close')}</button></div>
         <input type="hidden" name="projectId">
         <label>Project name<input name="name" maxlength="60" placeholder="e.g. Website redesign" required autofocus></label>
         <fieldset><legend>Color</legend><div class="color-options">${PROJECT_COLORS.map((color, index) => `<label class="color-choice" style="--choice:${color}"><input type="radio" name="color" value="${color}" ${index === 0 ? 'checked' : ''}><span></span></label>`).join('')}</div></fieldset>
-        <div class="dialog-actions"><button class="secondary-button" value="cancel">Cancel</button><button class="primary-button" value="default" type="submit">Save project</button></div>
+        <div class="dialog-actions"><button class="secondary-button" value="cancel" formnovalidate>Cancel</button><button class="primary-button" value="default" type="submit">Save project</button></div>
       </form>
     </dialog>
     <dialog id="entry-dialog">
       <form method="dialog" id="entry-form" class="dialog-form">
-        <div class="dialog-heading"><div><p class="eyebrow">Time entry</p><h2 id="entry-dialog-title">Add time</h2></div><button class="icon-button" value="cancel" aria-label="Close">${icon('close')}</button></div>
+        <div class="dialog-heading"><div><p class="eyebrow">Time entry</p><h2 id="entry-dialog-title">Add time</h2></div><button class="icon-button" value="cancel" formnovalidate aria-label="Close">${icon('close')}</button></div>
         <input type="hidden" name="projectId"><input type="hidden" name="entryId">
         <label>Date<input type="date" name="date" required></label>
         <div class="duration-inputs"><label>Hours<input type="number" name="hours" min="0" max="999" value="0" required></label><label>Minutes<input type="number" name="minutes" min="0" max="59" value="30" required></label></div>
         <label>Note <span>(optional)</span><input name="note" maxlength="120" placeholder="What did you work on?"></label>
         <p class="form-error" id="entry-error" role="alert"></p>
-        <div class="dialog-actions"><button class="secondary-button" value="cancel">Cancel</button><button class="primary-button" value="default" type="submit">Save entry</button></div>
+        <div class="dialog-actions"><button class="secondary-button" value="cancel" formnovalidate>Cancel</button><button class="primary-button" value="default" type="submit">Save entry</button></div>
       </form>
     </dialog>
     <dialog id="import-dialog">
       <form method="dialog" id="import-form" class="dialog-form">
-        <div class="dialog-heading"><div><p class="eyebrow">Restore backup</p><h2>Replace current data?</h2></div><button class="icon-button" value="cancel" aria-label="Close">${icon('close')}</button></div>
+        <div class="dialog-heading"><div><p class="eyebrow">Restore backup</p><h2>Replace current data?</h2></div><button class="icon-button" value="cancel" formnovalidate aria-label="Close">${icon('close')}</button></div>
         <div id="import-summary"></div>
         <p class="warning-copy">Importing replaces everything currently stored in this browser. Export first if you need a copy.</p>
-        <div class="dialog-actions"><button class="secondary-button" value="cancel">Cancel</button><button class="primary-button" value="default" type="submit">Import backup</button></div>
+        <div class="dialog-actions"><button class="secondary-button" value="cancel" formnovalidate>Cancel</button><button class="primary-button" value="default" type="submit">Import backup</button></div>
       </form>
     </dialog>
     <dialog id="confirm-dialog">
       <form method="dialog" class="dialog-form">
-        <div class="dialog-heading"><div><h2 id="confirm-title">Are you sure?</h2></div><button class="icon-button" value="cancel" aria-label="Close">${icon('close')}</button></div>
+        <div class="dialog-heading"><div><h2 id="confirm-title">Are you sure?</h2></div><button class="icon-button" value="cancel" formnovalidate aria-label="Close">${icon('close')}</button></div>
         <p id="confirm-message"></p>
-        <div class="dialog-actions"><button class="secondary-button" value="cancel">Cancel</button><button class="primary-button" id="confirm-confirm-button" value="confirm" type="submit">Confirm</button></div>
+        <div class="dialog-actions"><button class="secondary-button" value="cancel" formnovalidate>Cancel</button><button class="primary-button" id="confirm-confirm-button" value="confirm" type="submit">Confirm</button></div>
       </form>
     </dialog>
     <div class="toast" role="status" aria-live="polite"></div>`
