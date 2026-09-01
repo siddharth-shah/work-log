@@ -1064,6 +1064,13 @@ dialog {
   color: var(--ink);
   border: 1px solid var(--border);
   border-radius: 15px;
+  /* Clip to the rounded corners explicitly instead of relying on the
+     default overflow:auto — an unclipped .dialog-actions bleed (see below)
+     combined with GPU compositing for the box-shadow/backdrop-filter blur
+     has been reported to leave part of the dialog stale-painted in some
+     browser profiles until a repaint is forced (e.g. resize/scroll). This
+     is defensive: it doesn't change layout, only how the corners composite. */
+  overflow: hidden;
   background: #fff;
   box-shadow: 0 24px 80px rgba(19, 28, 55, 0.2);
 }
