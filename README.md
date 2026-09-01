@@ -2,6 +2,18 @@
 
 A lightweight, private project time tracker for the browser. Timebase tracks live work sessions, accepts manual entries across different days, keeps completed projects archived, and backs everything up as JSON.
 
+**Live demo:** https://faelotech.github.io/work-log/
+
+## Demo
+
+**Dashboard** — create a project, start/pause/resume/stop its timer, and see the session logged:
+
+![Dashboard demo: creating a project and tracking a timer through pause, resume, and stop](docs/timebase-demo.gif)
+
+**Chrome extension popup** — the same timer controls in the compact toolbar popup:
+
+![Extension popup demo: starting, pausing, resuming, and stopping a timer from the popup](docs/timebase-popup-demo.gif)
+
 ## Features
 
 - Multiple active projects with separate time totals
